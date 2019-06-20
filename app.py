@@ -47,6 +47,7 @@ def login():
         try:
             if db.validate_login(username, password):
                 session['username'] = username
+                logger.login(username)
                 return redirect(url_for('index'))
             else:
                 return redirect(url_for('login', error='invalidlogin'))
@@ -75,9 +76,8 @@ def register():
         try:
             db.create_user(username, password)
             session['username'] = username
+            logger.register(username)
             return redirect(url_for('index'))
-            # else:
-            #     return redirect(url_for('register', error='UsernameTakenError'))
         except UsernameTakenError:
             return redirect(url_for('register', error='UsernameTakenError'))
 
@@ -89,6 +89,7 @@ def register():
 @app.route('/logout')
 def logout():
     if 'username' in session:
+        logger.logout('username')
         session.pop('username', None)
     return redirect(url_for('login'))
 
@@ -110,7 +111,10 @@ def send_message():
     room = request.args.get('room', '')
     author = session['username']
     content = request.args.get('msg', '')
-    
+
+    for word in config.bad_words:
+        content = censor(content, word)
+
     logger.message(room, author, content)
     db.add_message(room, author, content)
     messages = db.get_messages(room)
@@ -123,8 +127,20 @@ def get_messages():
     messages = db.get_messages(room)
     return render_template('messages.html', messages=messages)
 
+def censor(text, word):
+	word_list = text.split()
+	result = ""
+	stars = "*" * len(word)
+	count = 0
+	index = 0
 
+	for i in word_list:
+		if i == word:
+			word_list[index] = stars
+		index += 1
+	result = " ".join(word_list)
 
+	return result
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0') # Run on local network, use ifconfig to find ip
