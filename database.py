@@ -1,4 +1,5 @@
 # database.py
+import config
 import pymongo
 from datetime import datetime
 import bcrypt
@@ -8,9 +9,9 @@ from exceptions import InvalidLoginError, UsernameTakenError
 class Connection:
     """A connection to the database."""
 
-    def __init__(self, app, host, port):
+    def __init__(self, app):
         self.app = app
-        self.client = pymongo.MongoClient(host, port)
+        self.client = pymongo.MongoClient(config.mongo_connection_string)
     
         self.db = self.client['chat-app']
         self.messages = self.db['messages']

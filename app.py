@@ -1,15 +1,17 @@
+import config
+
 # app.py
-from exceptions import InvalidLoginError
+from exceptions import InvalidLoginError, UsernameTakenError
 
 # Initialize flask
 from flask import Flask, render_template, url_for, session, redirect, request, escape
 app = Flask(__name__)
 app.debug = True
-app.secret_key = b'JPtUKpetQiyfzGpBS5SM' # yeah, i don't care. hack me
+app.secret_key = config.secret_key # yeah, i don't care. hack me
 
 # Establish connection to the database
 from database import Connection
-db = Connection(app, 'localhost', 27017)
+db = Connection(app)
 
 # Initialize chatlogger
 from chatlog import Logger
@@ -55,6 +57,34 @@ def login():
         error = request.args.get('error', '')
     
     return render_template('login.html', error=error)
+
+# Register page
+@app.route('/register/', methods=['GET', 'POST'])
+def register():
+
+    if 'username' in session:
+        return redirect(url_for('index'))
+
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+
+        if username in {None, ""}:
+            return redirect(url_for('register', error="nouser"))
+
+        try:
+            db.create_user(username, password)
+            session['username'] = username
+            return redirect(url_for('index'))
+            # else:
+            #     return redirect(url_for('register', error='UsernameTakenError'))
+        except UsernameTakenError:
+            return redirect(url_for('register', error='UsernameTakenError'))
+
+    if request.method == 'GET':
+        error = request.args.get('error', '')
+    
+    return render_template('register.html', error=error)
 
 @app.route('/logout')
 def logout():
